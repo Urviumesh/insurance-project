@@ -1,0 +1,69 @@
+node {
+    def mavenHome
+    def mavenCMD
+    def dockerCMD
+    def tagName
+
+    stage('Prepare Environment') {
+        echo 'Initializing variables...'
+        mavenHome = tool name: 'maven', type: 'maven'
+        mavenCMD = "${mavenHome}/bin/mvn"
+        dockerCMD = "docker" // Assuming Docker is installed globally
+        tagName = "3.0"
+    }
+
+    stage('Git Code Checkout') {
+        try {
+            echo 'Cloning repository...'
+            git 'https://github.com/shubhamkushwah123/star-agile-insurance-project.git'
+        } catch (Exception e) {
+            echo 'Git Checkout Failed'
+            currentBuild.result = "FAILURE"
+            emailext(
+                body: """Dear All,
+
+                The Jenkins job ${JOB_NAME} has failed. Please check the link below:
+                ${BUILD_URL}""",
+                subject: "Job ${JOB_NAME} ${BUILD_NUMBER} Failed",
+                to: 'shubham@gmail.com'
+            )
+        }
+    }
+
+    stage('Build the Application') {
+        echo "Cleaning... Compiling... Testing... Packaging..."
+        sh "${mavenCMD} clean package"
+    }
+
+    stage('Publish Test Reports') {
+        publishHTML([
+            reportDir: 'target/surefire-reports',
+            reportFiles: 'index.html',
+            reportName: 'HTML Report'
+        ])
+    }
+
+    stage('Containerize the Application') {
+        echo 'Creating Docker image...'
+        sh "${dockerCMD} build -t shubhamkushwah123/insure-me:${tagName} ."
+    }
+
+    stage('Push to DockerHub') {
+        echo 'Pushing Docker image...'
+        withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
+            sh "echo ${dockerHubPassword} | ${dockerCMD} login -u shubhamkushwah123 --password-stdin"
+            sh "${dockerCMD} push shubhamkushwah123/insure-me:${tagName}"
+        }
+    }
+
+    stage('Configure and Deploy to Test Server') {
+        ansiblePlaybook(
+            become: true,
+            credentialsId: 'ansible-key',
+            disableHostKeyChecking: true,
+            installation: 'ansible',
+            inventory: '/etc/ansible/hosts',
+            playbook: 'ansible-playbook.yml'
+        )
+    }
+}
