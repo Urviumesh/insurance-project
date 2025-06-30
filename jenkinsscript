@@ -15,7 +15,7 @@ node {
     stage('Git Code Checkout') {
         try {
             echo 'Cloning repository...'
-            git 'https://github.com/shubhamkushwah123/star-agile-insurance-project.git'
+            git git 'https://github.com/Urviumesh/insurance-project.git'
         } catch (Exception e) {
             echo 'Git Checkout Failed'
             currentBuild.result = "FAILURE"
@@ -25,7 +25,7 @@ node {
                 The Jenkins job ${JOB_NAME} has failed. Please check the link below:
                 ${BUILD_URL}""",
                 subject: "Job ${JOB_NAME} ${BUILD_NUMBER} Failed",
-                to: 'shubham@gmail.com'
+                to: 'urvi11umesh@gmail.com'
             )
         }
     }
@@ -45,14 +45,14 @@ node {
 
     stage('Containerize the Application') {
         echo 'Creating Docker image...'
-        sh "${dockerCMD} build -t shubhamkushwah123/insure-me:${tagName} ."
+        sh "${dockerCMD} build -t urvi11umesh/insurance-app:${tagName} ."
     }
 
     stage('Push to DockerHub') {
         echo 'Pushing Docker image...'
         withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
-            sh "echo ${dockerHubPassword} | ${dockerCMD} login -u shubhamkushwah123 --password-stdin"
-            sh "${dockerCMD} push shubhamkushwah123/insure-me:${tagName}"
+            sh "echo ${dockerHubPassword} | ${dockerCMD} login -u urvi11umesh --password-stdin"
+            sh "${dockerCMD} push urvi11umesh/insurance-app:${tagName}"
         }
     }
 
