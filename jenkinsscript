@@ -8,25 +8,26 @@ node {
         echo 'Initializing variables...'
         mavenHome = tool name: 'maven', type: 'maven'
         mavenCMD = "${mavenHome}/bin/mvn"
-        dockerCMD = "docker" // Assuming Docker is installed globally
+        dockerCMD = "docker" // Assuming Docker is globally installed
         tagName = "3.0"
     }
 
     stage('Git Code Checkout') {
         try {
             echo 'Cloning repository...'
-            git 'https://github.com/Urviumesh/insurance-project.git'
+            git url: 'https://github.com/Urviumesh/insurance-project.git'
         } catch (Exception e) {
             echo 'Git Checkout Failed'
             currentBuild.result = "FAILURE"
             emailext(
                 body: """Dear All,
 
-                The Jenkins job ${JOB_NAME} has failed. Please check the link below:
-                ${BUILD_URL}""",
+The Jenkins job ${JOB_NAME} has failed. Please check the link below:
+${BUILD_URL}""",
                 subject: "Job ${JOB_NAME} ${BUILD_NUMBER} Failed",
                 to: 'urvi11umesh@gmail.com'
             )
+            error("Stopping pipeline due to Git failure.")
         }
     }
 
@@ -53,6 +54,7 @@ node {
         withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
             sh "echo ${dockerHubPassword} | ${dockerCMD} login -u urvi11umesh --password-stdin"
             sh "${dockerCMD} push urvi11umesh/insurance-app:${tagName}"
+            sh "${dockerCMD} logout"
         }
     }
 
