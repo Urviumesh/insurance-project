@@ -59,13 +59,14 @@ ${BUILD_URL}""",
     }
 
     stage('Configure and Deploy to Test Server') {
-        ansiblePlaybook(
-            become: true,
+       ansiblePlaybook(
+            installation: 'ansible',
+            playbook: 'ansible-playbook.yml',
+            inventory: '/etc/ansible/hosts',
             credentialsId: 'ansible-key',
             disableHostKeyChecking: true,
-            installation: 'ansible',
-            inventory: '/etc/ansible/hosts',
-            playbook: 'ansible-playbook.yml'
+            become: true
         )
+
     }
 }
