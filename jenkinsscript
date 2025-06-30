@@ -15,7 +15,7 @@ node {
     stage('Git Code Checkout') {
         try {
             echo 'Cloning repository...'
-            git git 'https://github.com/Urviumesh/insurance-project.git'
+            git 'https://github.com/Urviumesh/insurance-project.git'
         } catch (Exception e) {
             echo 'Git Checkout Failed'
             currentBuild.result = "FAILURE"
