@@ -4,11 +4,15 @@ node {
     def dockerCMD
     def tagName
 
+    // Set environment variable manually in Scripted Pipeline
+    env.ANSIBLE_HOST_KEY_CHECKING = 'False'
+
     stage('Prepare Environment') {
         echo 'Initializing variables...'
         mavenHome = tool name: 'maven', type: 'maven'
+        
         mavenCMD = "${mavenHome}/bin/mvn"
-        dockerCMD = "docker" // Assuming Docker is globally installed
+        dockerCMD = "docker"
         tagName = "3.0"
     }
 
@@ -51,22 +55,26 @@ ${BUILD_URL}""",
 
     stage('Push to DockerHub') {
         echo 'Pushing Docker image...'
-        withCredentials([string(credentialsId: 'dock-password', variable: 'dockerHubPassword')]) {
-            sh "echo ${dockerHubPassword} | ${dockerCMD} login -u urvi11umesh --password-stdin"
+        withCredentials([usernamePassword(credentialsId: 'dock-password', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
             sh "${dockerCMD} push urvi11umesh/insurance-app:${tagName}"
             sh "${dockerCMD} logout"
         }
     }
 
     stage('Configure and Deploy to Test Server') {
-       ansiblePlaybook(
-            installation: 'ansible',
+    echo 'Running Ansible playbook on test server...'
+    sshagent(['ansible-ssh-key']) {
+        sh '''
+            mkdir -p ~/.ssh
+            ssh-keyscan -H 172.31.5.53 >> ~/.ssh/known_hosts
+        '''
+        ansiblePlaybook(
             playbook: 'ansible-playbook.yml',
             inventory: '/etc/ansible/hosts',
-            credentialsId: 'ansible-key',
-            disableHostKeyChecking: true,
-            become: true
+            become: true,
+            becomeUser: 'root'
         )
-
     }
 }
+} 
